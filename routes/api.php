@@ -15,4 +15,5 @@ Route::post('test', function(Request $request){
     ]);
 });
 
+require __DIR__ . '/auth.php';
 require __DIR__ . '/api_v1.php';
