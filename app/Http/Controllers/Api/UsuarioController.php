@@ -41,7 +41,7 @@ class UsuarioController extends Controller
 
         return response()->json([
             'user' => $user
-        ]);
+        ], 201);
     }
 
     /**
