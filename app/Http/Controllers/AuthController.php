@@ -5,79 +5,49 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
+use function Pest\Laravel\json;
+
 class AuthController extends Controller
 {
-    /**
-     * Create a new AuthController instance.
-     *
-     * @return void
-     */
-    public function __construct()
+    public function store(Request $request)
     {
-        // $this->middleware('auth:api', ['except' => ['login']]);
-    }
+        $request->validate([
+            'email' => ['required', 'string', 'email'],
+            'password' => ['required', 'string'],
+        ]);
 
-    /**
-     * Get a JWT via given credentials.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function login()
-    {
-        $credentials = request(['email', 'password']);
-
-        if (! $token = auth()->attempt($credentials)) {
-            return response()->json(['error' => 'Unauthorized'], 401);
+        if (!$token = Auth::attempt($request->only(['email', 'password']))) {
+            return response()->json(['email' =>  __('auth.failed')], 401);
         }
 
         return $this->respondWithToken($token);
     }
 
-    /**
-     * Get the authenticated User.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function me()
+    public function show(Request $request)
     {
-        return response()->json(auth()->user());
+        return response()->json($request->user());
     }
 
-    /**
-     * Log the user out (Invalidate the token).
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function logout()
+    public function update()
     {
-        auth()->logout();
-
-        return response()->json(['message' => 'Successfully logged out']);
+        return $this->respondWithToken(Auth::refresh());
     }
 
-    /**
-     * Refresh a token.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function refresh()
+    public function destroy()
     {
-        return $this->respondWithToken(auth()->refresh());
+        Auth::guard('api')->logout();
+
+        return response()->noContent();
     }
 
-    /**
-     * Get the token array structure.
-     *
-     * @param  string $token
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
     protected function respondWithToken($token)
     {
+        $expire =  Auth::factory()->getTTL() * 60;
+
         return response()->json([
             'access_token' => $token,
             'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60
-        ]);
+            'expires_in' => $expire
+        ])->header('Set-Cookie', cookie('auth-token', $token, $expire, '/'));
     }
 }
