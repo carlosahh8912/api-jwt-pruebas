@@ -18,13 +18,24 @@ class SignatureRequest
     {
         $signature = $request->header('Message-Signature');
         $timestamp = intval($request->header('Timestamp'));
+        $requestId = strval($request->header('Client-Request-Id'));
         $secret = env('JWT_SECRET');
 
         $body = $request->all();
 
         try {
 
+            if (!$requestId) {
+                throw new Exception("No se encuentra el ID de la petición", 403);
+            }
+
+            if (!is_string($requestId) || !\Ramsey\Uuid\Uuid::isValid($requestId)) {
+                throw new Exception("El ID de la petición no tiene el formato correcto", 403);
+            }
+
             if (!$timestamp) {
+
+                    
                 throw new Exception("No se encuentra la fecha en la petición", 403);
             }
 
@@ -44,7 +55,9 @@ class SignatureRequest
                 throw new Exception("La firma tiene un formato incorrecto", 403);
             }
 
-            $extendedHash = base64_encode(hash_hmac('sha256', json_encode($body), $secret, true));
+            $rawSignature = $requestId . $timestamp . json_encode($body);
+
+            $extendedHash = base64_encode(hash_hmac('sha256', $rawSignature, $secret, true));
 
             if ($extendedHash !== $signature) {
                 throw new Exception("La firma es incorrecta", 403);

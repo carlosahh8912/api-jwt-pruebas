@@ -9,13 +9,16 @@ Route::any('test', function (Request $request) {
 
     // $serialize = serialize($cookie);
 
+    $longString = $request->header('Client-Request-Id') . $request->header('Timestamp') . json_encode($request->all());
+
     $date = new DateTimeImmutable();
 
     return response()->json([
         'headers' => $request->header(),
         'data' => $request->all(),
         'timestamp' => $date->getTimestamp(),
-        'fecha' => date('Y-m-d H:i', $date->getTimestamp()),
+        'fecha' => date('Y-m-d H:i:s', intval($request->header('Timestamp'))),
+        'firma' =>  base64_encode(hash_hmac('sha256', $longString, env('JWT_SECRET'), true)),
     ]);
 });
 
